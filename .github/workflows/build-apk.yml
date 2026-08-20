@@ -17,7 +17,6 @@ jobs:
     - name: Unzip Source Code
       run: |
         unzip -o finporto.zip -d extracted_project
-        # Cari di mana letak file build.gradle berada
         BG_PATH=$(find extracted_project -name "build.gradle*" | head -n 1)
         if [ -n "$BG_PATH" ]; then
           BG_DIR=$(dirname "$BG_PATH")
@@ -35,10 +34,14 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: 8.2 # Mengunci versi gradle agar cocok dengan project kts
+
     - name: Generate Missing Gradle Wrapper
       run: |
-        # Mengunduh dan membuat file gradlew baru jika hilang
-        gradle wrapper --gradle-version 8.2
+        gradle wrapper
         chmod +x gradlew
 
     - name: Build Debug APK
