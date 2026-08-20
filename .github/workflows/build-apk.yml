@@ -17,13 +17,15 @@ jobs:
     - name: Unzip Source Code
       run: |
         unzip -o finporto.zip -d extracted_project
-        if [ $(ls -1 extracted_project | wc -l) -eq 1 ] && [ -d "extracted_project/$(ls extracted_project)" ]; then
-          echo "Mendeteksi subfolder, memindahkan file..."
-          mv extracted_project/$(ls extracted_project)/* .
-          mv extracted_project/$(ls extracted_project)/.* . 2>/dev/null || true
+        # Cari di mana letak file build.gradle berada
+        BG_PATH=$(find extracted_project -name "build.gradle*" | head -n 1)
+        if [ -n "$BG_PATH" ]; then
+          BG_DIR=$(dirname "$BG_PATH")
+          echo "Proyek Android ditemukan di folder: $BG_DIR"
+          mv "$BG_DIR"/* .
+          mv "$BG_DIR"/.* . 2>/dev/null || true
         else
-          mv extracted_project/* .
-          mv extracted_project/.* . 2>/dev/null || true
+          mv extracted_project/* . 2>/dev/null || true
         fi
         rm -rf extracted_project
 
@@ -32,28 +34,19 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
-        cache: 'gradle'
 
-    - name: Grant Execute Permission for Gradle
+    - name: Generate Missing Gradle Wrapper
       run: |
-        GRADLEW_PATH=$(find . -name gradlew)
-        if [ -n "$GRADLEW_PATH" ]; then
-          chmod +x "$GRADLEW_PATH"
-          echo "gradlew ditemukan di: $GRADLEW_PATH"
-        else
-          echo "Error: gradlew tetap tidak ditemukan!"
-          exit 1
-        fi
+        # Mengunduh dan membuat file gradlew baru jika hilang
+        gradle wrapper --gradle-version 8.2
+        chmod +x gradlew
 
     - name: Build Debug APK
-      run: |
-        GRADLEW_PATH=$(find . -name gradlew)
-        GRADLEW_DIR=$(dirname "$GRADLEW_PATH")
-        cd "$GRADLEW_DIR"
-        ./gradlew assembleDebug
+      run: ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: finporto-debug-apk
         path: "**/build/outputs/apk/debug/app-debug.apk"
+        
